@@ -76,6 +76,11 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 Enjoy using **Influential One**! 🚀
 
 
+# Result
 
 
+
+
+![WhatsApp Image 2025-03-23 at 11 48 09 PM](https://github.com/user-attachments/assets/0abc65c9-16cb-4c08-9dfd-6eaf149f26c2)
+![WhatsApp Image 2025-03-23 at 11 48 12 PM](https://github.com/user-attachments/assets/489e361c-b118-46aa-aefd-2bf46e0810a6)
 
