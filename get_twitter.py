@@ -352,14 +352,18 @@ class TwitterLiteAnalyzer:
         return profile
     
     def save_profile_to_json(self, profile, filename=None):
-        """Save the profile to a JSON file."""
+        """Save the profile to a JSON file in the 'data' folder."""
         if not filename:
             filename = f"{profile['username']}_profile.json"
         
-        with open(filename, 'w') as f:
+        # Ensure the 'data' folder exists
+        os.makedirs('data', exist_ok=True)
+        
+        filepath = os.path.join('data', filename)
+        with open(filepath, 'w') as f:
             json.dump(profile, f, indent=4)
         
-        return filename
+        return filepath
     
     def visualize_profile(self, profile):
         """Create basic visualizations of the profile data."""
@@ -399,8 +403,11 @@ class TwitterLiteAnalyzer:
             
             plt.tight_layout(rect=[0, 0.08, 1, 0.98])
             
-            # Save the figure
-            filename = f"{profile['username']}_visualization.png"
+            # Ensure the 'data' folder exists
+            os.makedirs('data', exist_ok=True)
+            
+            # Save the figure in the 'data' folder
+            filename = os.path.join('data', f"{profile['username']}_visualization.png")
             plt.savefig(filename)
             plt.close()
             

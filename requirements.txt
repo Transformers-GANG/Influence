@@ -6,3 +6,4 @@ textblob
 dotenv
 matplotlib
 feedparser
+tweepy
