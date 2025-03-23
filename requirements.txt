@@ -3,3 +3,7 @@ wikipedia-api
 wikipedia
 google-generativeai
 textblob
+dotenv
+matplotlib
+feedparser
+tweepy
