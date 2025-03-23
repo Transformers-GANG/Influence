@@ -7,11 +7,26 @@ import os
 import json
 from dotenv import load_dotenv
 from news_senti_model import fetch_news_from_rss, get_sentiment_score, calculate_credibility_score, evaluate_credibility
+from get_twitter import TwitterLiteAnalyzer
+
 
 load_dotenv()
 
 # Configure Gemini API Key
 genai.configure(api_key=os.getenv('GEMINI_API_KEY'))  # Replace with your actual API key
+
+def get_twitter_profile(handle):
+    """Fetches Twitter profile data for the specified handle."""
+    if not handle:
+        return None
+    
+    analyzer = TwitterLiteAnalyzer()
+    profile = analyzer.generate_profile(handle)
+    
+    # Create visualization
+    viz_file = analyzer.visualize_profile(profile)
+    
+    return profile, viz_file
 
 def get_person_details_gemini(person_name):
     """Fetches and extracts detailed information about a person using Gemini API."""
@@ -227,6 +242,46 @@ if name:
                 )
             else:
                 st.write("No company data available.")
+    
+    if twitter_handle:
+        st.write(f"Found Twitter handle: @{twitter_handle}")
+        
+        with st.spinner("Fetching Twitter data..."):
+            twitter_profile, twitter_viz = get_twitter_profile(twitter_handle)
+        
+        if twitter_profile:
+            st.subheader(f"Twitter Profile for @{twitter_profile['username']}")
+            
+            # Display Twitter metrics in columns
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.metric("Followers", f"{twitter_profile['followers']:,}")
+                st.metric("Years Active", f"{twitter_profile['years_active']}")
+            
+            with col2:
+                st.metric("Engagement Rate", f"{twitter_profile['engagement_rate']*100:.2f}%")
+                st.metric("Content Quality", f"{twitter_profile['content_quality']}/10")
+            
+            # Display sentiment score
+            st.metric("Sentiment Score", f"{twitter_profile['sentiment']:.2f}")
+            
+            # Display topics
+            st.subheader("Top Topics")
+            st.markdown(
+                f"""
+                <div class="company-block">
+                    {"".join(f'<span>{topic}</span>' for topic in twitter_profile['topics'])}
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            
+            # Display the visualization image
+            if twitter_viz:
+                st.image(twitter_viz, caption=f"Growth Analysis for @{twitter_profile['username']}")
+    else:
+        st.warning("No Twitter handle found for this person. Add it to your twittermappings.json file to enable Twitter analysis.")
                 
     with st.spinner("Fetching related news..."):
         articles = fetch_news_from_rss(name)
