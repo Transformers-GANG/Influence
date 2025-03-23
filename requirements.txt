@@ -2,3 +2,4 @@ streamlit
 wikipedia-api
 wikipedia
 google-generativeai
+textblob
