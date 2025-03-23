@@ -1,3 +1,7 @@
+
+![finallogoauraauraFINAL](https://github.com/user-attachments/assets/a4681d08-89a3-40e1-bda9-c222cf8e34ae)
+
+
 # Influential One
 Influential One is a powerful AI-powered platform designed to rank public figures based on long-term relevance and impact. By analyzing sentiment and engagement metrics, it provides meaningful insights beyond fleeting fame.
 ---
@@ -73,6 +77,5 @@ Enjoy using **Influential One**! 🚀
 
 
 
-![logoauraflix](https://github.com/user-attachments/assets/17271630-8525-428f-9b0e-a479ae0860ca)
-## Logo
-![finallogoauraauraFINAL](https://github.com/user-attachments/assets/a4681d08-89a3-40e1-bda9-c222cf8e34ae)
+
+
