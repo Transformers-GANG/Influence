@@ -150,6 +150,23 @@ st.title("Influence IQ")
 st.write("Enter a name below to fetch structured information about the person.")
 
 name = st.text_input("Enter a person's name:")
+# Load Twitter mappings from the JSON file
+try:
+    with open("twittermappings.json", "r") as file:
+        twitter_mappings = json.load(file)
+except FileNotFoundError:
+    st.error("Twitter mappings file not found.")
+    twitter_mappings = {}
+
+# Normalize the name and check for a Twitter handle
+normalized_name = name.strip().lower()
+twitter_handle = None
+
+if "influencers" in twitter_mappings:
+    for key, handle in twitter_mappings["influencers"].items():
+        if key.strip().lower() == normalized_name:
+            twitter_handle = handle
+            break
 
 if name:
     # Fetch Wikipedia image
