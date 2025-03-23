@@ -6,6 +6,7 @@ import requests
 import os
 import json
 from dotenv import load_dotenv
+from news_senti_model import fetch_news_from_rss, get_sentiment_score, calculate_credibility_score, evaluate_credibility
 
 load_dotenv()
 
@@ -209,3 +210,23 @@ if name:
                 )
             else:
                 st.write("No company data available.")
+                
+    with st.spinner("Fetching related news..."):
+        articles = fetch_news_from_rss(name)
+
+    if articles:
+        sentiment_score = get_sentiment_score(articles)
+        credibility_score = calculate_credibility_score(articles, sentiment_score)
+        credibility, nature = evaluate_credibility(credibility_score)
+
+        st.subheader(f"Sentiment & Credibility Analysis for {name}")
+        st.metric("Sentiment Score", f"{sentiment_score:.2f}")
+        st.metric("Credibility Score", f"{credibility_score:.2f}")
+        st.metric("Overall News Nature", nature)
+        st.metric("Credibility", credibility)
+
+        st.subheader("Recent News Articles")
+        for article in articles:
+            st.write(f"[{article['title']}]({article['url']}) - {article['publishedAt']}")
+    else:
+        st.warning("No relevant news articles found.")
