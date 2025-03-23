@@ -1,6 +1,8 @@
 import streamlit as st
 import google.generativeai as genai
 import json
+import numpy as np
+import pandas as pd
 import re
 import requests
 import os
@@ -14,6 +16,150 @@ load_dotenv()
 
 # Configure Gemini API Key
 genai.configure(api_key=os.getenv('GEMINI_API_KEY'))  # Replace with your actual API key
+
+def calculate_influence_score(person_data, twitter_profile=None, news_data=None):
+    """
+    Calculate an overall influence score out of 100 based on all available data.
+    
+    Parameters:
+    - person_data: Dict with basic information about the person
+    - twitter_profile: Dict with Twitter analytics (optional)
+    - news_data: Dict with news and credibility information (optional)
+    
+    Returns:
+    - score: Integer representing overall influence score (0-100)
+    - breakdown: Dict with component scores for explanation
+    """
+    # Initialize score components
+    components = {
+        "reach": 0,        # Audience size
+        "engagement": 0,   # Audience interaction
+        "longevity": 0,    # Time in public eye
+        "credibility": 0,  # Trustworthiness
+        "impact": 0,       # Real-world influence
+        "consistency": 0   # Stable, non-controversial presence
+    }
+    
+    # Track which data sources we have
+    has_twitter = twitter_profile is not None
+    has_news = news_data is not None and 'credibility_score' in news_data
+    
+    # Calculate reach score (25 points max)
+    if has_twitter:
+        # Log scale for followers (1M+ followers = 20 points)
+        follower_points = min(20, 4 * (1 + np.log10(max(twitter_profile['followers'], 1000) / 1000)))
+        components['reach'] = follower_points
+    
+    # Net worth can contribute to reach/impact (5 points max)
+    if person_data.get('Net Worth') and person_data['Net Worth'] != 'unknown':
+        try:
+            # Try to extract a numeric value from the net worth string
+            net_worth_str = person_data['Net Worth'].strip().lower()
+            net_worth_str = re.sub(r'[^0-9.]', '', net_worth_str.split()[0])
+            net_worth_value = float(net_worth_str)
+            
+            # More points for higher net worth (log scale)
+            net_worth_points = min(5, 1 + np.log2(net_worth_value) / 2) if net_worth_value > 0 else 0
+            components['impact'] += net_worth_points
+        except:
+            # If parsing fails, give a small default value
+            components['impact'] += 1
+    
+    # Calculate engagement score (20 points max)
+    if has_twitter:
+        # Engagement rate (industry average is ~0.5-2%)
+        engagement_points = min(15, twitter_profile['engagement_rate'] * 500)  # 3% = 15 points
+        content_quality_points = twitter_profile['content_quality'] / 2  # 5 points max
+        components['engagement'] = engagement_points + content_quality_points
+    
+    # Calculate longevity score (15 points max)
+    if has_twitter:
+        # Years active (10+ years = 15 points, scales linearly)
+        years_active_points = min(15, twitter_profile['years_active'] * 1.5)
+        components['longevity'] = years_active_points
+    
+    # Calculate credibility score (25 points max)
+    if has_news:
+        # News credibility directly translates (0-10 scale to 0-20 scale)
+        news_credibility_points = news_data['credibility_score'] * 2
+        components['credibility'] = news_credibility_points
+    
+    if has_twitter:
+        # Add up to 5 more credibility points for verification and sentiment
+        verified_points = 5 if twitter_profile.get('verified', False) else 0
+        # Neutral-to-positive sentiment is better for credibility (0.5-1.0 is good)
+        sentiment_points = 5 * (twitter_profile['sentiment'] - 0.3) if twitter_profile['sentiment'] > 0.3 else 0
+        components['credibility'] += min(5, verified_points + sentiment_points)
+    
+    # Calculate impact score (10 points max, beyond net worth)
+    if person_data.get('Companies'):
+        # More companies = more impact, up to 5 companies
+        company_points = min(5, len(person_data['Companies']))
+        components['impact'] += company_points
+    
+    if person_data.get('Charity') and person_data['Charity'] != 'unknown':
+        # Give points for charity involvement
+        components['impact'] += 5
+    
+    # Calculate consistency score (5 points max)
+    if has_twitter and has_news:
+        # Consistency between social sentiment and news sentiment
+        twitter_sentiment = twitter_profile['sentiment']
+        news_sentiment = news_data.get('sentiment_score', 0.5)
+        
+        # Closer values = more consistency
+        sentiment_diff = abs(twitter_sentiment - news_sentiment)
+        consistency_points = 5 * (1 - min(1, sentiment_diff))
+        components['consistency'] = consistency_points
+    
+    # Calculate total score
+    max_possible = 0
+    actual_score = 0
+    
+    component_weights = {
+        "reach": 25,
+        "engagement": 20,
+        "longevity": 15,
+        "credibility": 25,
+        "impact": 10,
+        "consistency": 5
+    }
+    
+    for component, weight in component_weights.items():
+        max_possible += weight
+        actual_score += components[component]
+    
+    # Scale score to be out of 100 based on available data
+    if max_possible > 0:
+        overall_score = int(round((actual_score / max_possible) * 100))
+    else:
+        overall_score = 0
+    
+    # Grade the score
+    if overall_score >= 90:
+        grade = "A+ (Elite Influencer)"
+    elif overall_score >= 80:
+        grade = "A (Top-tier Influencer)"
+    elif overall_score >= 70:
+        grade = "B+ (Major Influencer)"
+    elif overall_score >= 60:
+        grade = "B (Established Influencer)"
+    elif overall_score >= 50:
+        grade = "C+ (Growing Influencer)"
+    elif overall_score >= 40:
+        grade = "C (Moderate Influence)"
+    elif overall_score >= 30:
+        grade = "D+ (Emerging Influence)"
+    else:
+        grade = "D (Limited Influence)"
+    
+    # Return overall score and breakdown
+    return {
+        "score": overall_score,
+        "grade": grade,
+        "components": components,
+        "weights": component_weights
+    }
 
 def get_twitter_profile(handle):
     """Fetches Twitter profile data for the specified handle."""
@@ -282,6 +428,46 @@ if name:
                 st.image(twitter_viz, caption=f"Growth Analysis for @{twitter_profile['username']}")
     else:
         st.warning("No Twitter handle found for this person. Add it to your twittermappings.json file to enable Twitter analysis.")
+            
+        # Prepare data for influence score calculation
+    news_data = None
+    if 'sentiment_score' in locals() and 'credibility_score' in locals():
+        news_data = {
+            "sentiment_score": sentiment_score,
+            "credibility_score": credibility_score
+        }
+
+    # Calculate overall influence score
+    influence_results = calculate_influence_score(cleaned_data, twitter_profile if 'twitter_profile' in locals() else None, news_data)
+
+    # Display overall influence score
+    st.subheader("Influence Rating")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.metric("Overall Score", f"{influence_results['score']}/100")
+        st.metric("Grade", influence_results['grade'])
+
+    with col2:
+        # Create a radar chart or bar chart for component scores
+        components_df = pd.DataFrame({
+            'Component': list(influence_results['components'].keys()),
+            'Score': list(influence_results['components'].values()),
+            'Max': [influence_results['weights'][k] for k in influence_results['components'].keys()]
+        })
+        
+        # Convert to percentage of max possible score for each component
+        components_df['Percentage'] = components_df['Score'] / components_df['Max'] * 100
+        
+        # Display as a bar chart
+        st.bar_chart(components_df.set_index('Component')['Percentage'])
+
+    # Explanation of score components
+    with st.expander("Score Breakdown"):
+        for component, weight in influence_results['weights'].items():
+            score = influence_results['components'][component]
+            percentage = (score / weight) * 100
+            st.write(f"**{component.title()}** ({score:.1f}/{weight} points, {percentage:.1f}%)")
                 
     with st.spinner("Fetching related news..."):
         articles = fetch_news_from_rss(name)
