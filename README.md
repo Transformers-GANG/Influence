@@ -112,4 +112,5 @@ Enjoy using **Influential One**! 🚀
 
 
 
-![logoauraflix](https://github.com/user-attachments/assets/17271630-8525-428f-9b0e-a479ae0860ca)
+## Logo
+![finallogoauraauraFINAL](https://github.com/user-attachments/assets/a4681d08-89a3-40e1-bda9-c222cf8e34ae)
